@@ -117,13 +117,13 @@ public class NSClientService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        mWakeLock.acquire();
+        mWakeLock.acquire(60000);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        mWakeLock.release();
+        if (mWakeLock.isHeld()) mWakeLock.release();
     }
 
     public class LocalBinder extends Binder {
@@ -206,6 +206,8 @@ public class NSClientService extends Service {
         } else if (!nsEnabled) {
             MainApp.bus().post(new EventNSClientNewLog("NSCLIENT", "disabled"));
             MainApp.bus().post(new EventNSClientStatus("Disabled"));
+            destroy();
+            stopSelf();
         } else if (!nsURL.equals("")) {
             try {
                 MainApp.bus().post(new EventNSClientStatus("Connecting ..."));
@@ -453,7 +455,7 @@ public class NSClientService extends Service {
                     PowerManager powerManager = (PowerManager) MainApp.instance().getApplicationContext().getSystemService(Context.POWER_SERVICE);
                     PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                             "onDataUpdate");
-                    wakeLock.acquire();
+                    wakeLock.acquire(30000);
                     try {
 
                         JSONObject data = (JSONObject) args[0];
@@ -665,7 +667,7 @@ public class NSClientService extends Service {
                         }
                         //MainApp.bus().post(new EventNSClientNewLog("NSCLIENT", "onDataUpdate end");
                     } finally {
-                        wakeLock.release();
+                       if (wakeLock.isHeld()) wakeLock.release();
                     }
                 }
 
