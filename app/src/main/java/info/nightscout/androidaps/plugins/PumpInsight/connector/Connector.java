@@ -494,16 +494,18 @@ public class Connector {
 
     @Subscribe
     public void onStatusEvent(final EventFeatureRunning ev) {
-        if (SP.getBoolean("insight_preemptive_connect", true)) {
-            switch (ev.getFeature()) {
-                case WIZARD:
-                    log("Wizard feature detected, preconnecting to pump");
-                    connectToPump(120 * 1000);
-                    break;
-                case MAIN:
-                    log("Main feature detected, preconnecting to pump");
-                    connectToPump(30 * 1000);
-                    break;
+        if (isConnected()) {
+            if (SP.getBoolean("insight_preemptive_connect", true)) {
+                switch (ev.getFeature()) {
+                    case WIZARD:
+                        log("Wizard feature detected, preconnecting to pump");
+                        connectToPump(120 * 1000);
+                        break;
+                    case MAIN:
+                        log("Main feature detected, preconnecting to pump");
+                        connectToPump(30 * 1000);
+                        break;
+                }
             }
         }
     }
