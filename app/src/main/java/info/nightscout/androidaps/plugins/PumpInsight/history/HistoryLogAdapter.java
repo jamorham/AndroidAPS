@@ -1,12 +1,14 @@
 package info.nightscout.androidaps.plugins.PumpInsight.history;
 
 import java.util.Date;
+import java.util.List;
 
 import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.data.DetailedBolusInfo;
 import info.nightscout.androidaps.db.ExtendedBolus;
 import info.nightscout.androidaps.db.Source;
 import info.nightscout.androidaps.db.TemporaryBasal;
+import info.nightscout.androidaps.plugins.Treatments.Treatment;
 import info.nightscout.androidaps.plugins.Treatments.TreatmentsPlugin;
 
 /**
@@ -18,6 +20,7 @@ import info.nightscout.androidaps.plugins.Treatments.TreatmentsPlugin;
 class HistoryLogAdapter {
 
     private static final long MAX_TIME_DIFFERENCE = 61000;
+    private static final long MAX_BOLUS_TIME_DIFFERENCE = 30000;
 
     private static void log(String msg) {
         android.util.Log.e("HISTORYLOG", msg);
@@ -61,6 +64,7 @@ class HistoryLogAdapter {
     void createExtendedBolusRecord(Date eventDate, double insulin, int durationInMinutes, long record_id) {
 
         // TODO trap items below minimum period
+        // TODO extended bolus will likely need same treatment as standard bolus below
 
         final ExtendedBolus extendedBolus = new ExtendedBolus();
         extendedBolus.date = eventDate.getTime();
@@ -73,16 +77,27 @@ class HistoryLogAdapter {
     }
 
     void createStandardBolusRecord(Date eventDate, double insulin, long record_id) {
-
-        //DetailedBolusInfo detailedBolusInfo = DetailedBolusInfoStorage.findDetailedBolusInfo(eventDate.getTime());
-
-        // TODO do we need to do the same delete + insert that we are doing for temporary basals here too?
-
-        final DetailedBolusInfo detailedBolusInfo = new DetailedBolusInfo();
-        detailedBolusInfo.date = eventDate.getTime();
-        detailedBolusInfo.source = Source.PUMP;
-        detailedBolusInfo.pumpId = record_id;
-        detailedBolusInfo.insulin = insulin;
-        TreatmentsPlugin.getPlugin().addToHistoryTreatment(detailedBolusInfo);
+        final Treatment bolusFromHistory = TreatmentsPlugin.getPlugin().getService().getBolusFromHistoryNearestToTime(eventDate.getTime());
+        if ((bolusFromHistory != null) && (bolusFromHistory.insulin == insulin)
+                && (Math.abs(bolusFromHistory.date - eventDate.getTime()) < MAX_BOLUS_TIME_DIFFERENCE)) {
+            if (bolusFromHistory.source != Source.PUMP) {
+                log("Updating existing pump record: old record:  diff: " + Math.abs(bolusFromHistory.date - eventDate.getTime()) + "  " + bolusFromHistory.toString());
+                bolusFromHistory.source = Source.PUMP;
+                bolusFromHistory.pumpId = record_id;
+                TreatmentsPlugin.getPlugin().getService().update(bolusFromHistory);
+                log("Updating existing pump record: " + bolusFromHistory.toString());
+            } else {
+                log("Not Updating existing pump record as it is already marked as from pump");
+            }
+        } else {
+            final DetailedBolusInfo detailedBolusInfo = new DetailedBolusInfo();
+            detailedBolusInfo.date = eventDate.getTime();
+            detailedBolusInfo.source = Source.PUMP;
+            detailedBolusInfo.pumpId = record_id;
+            detailedBolusInfo.insulin = insulin;
+            TreatmentsPlugin.getPlugin().addToHistoryTreatment(detailedBolusInfo);
+            log("Creating new pump bolus record: " + detailedBolusInfo.toString());
+        }
     }
+
 }

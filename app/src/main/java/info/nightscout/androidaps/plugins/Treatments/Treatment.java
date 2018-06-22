@@ -40,10 +40,10 @@ public class Treatment implements DataPointWithLabelInterface {
     public boolean isValid = true;
 
     @DatabaseField(index = true)
-    public long pumpId = 0;
+    public volatile long pumpId = 0;
 
     @DatabaseField
-    public int source = Source.NONE;
+    public volatile int source = Source.NONE;
     @DatabaseField
     public String _id;
 
@@ -101,6 +101,7 @@ public class Treatment implements DataPointWithLabelInterface {
                 ", insulin= " + insulin +
                 ", carbs= " + carbs +
                 ", mealBolus= " + mealBolus +
+                ", source= " + Source.getString(source) +
                 "}";
     }
 

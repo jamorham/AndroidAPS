@@ -418,6 +418,22 @@ public class TreatmentService extends OrmLiteBaseService<DatabaseHelper> {
         return new ArrayList<>();
     }
 
+
+    public Treatment getBolusFromHistoryNearestToTime(long timestamp) {
+        final List<Treatment> treatments = TreatmentsPlugin.getPlugin().getTreatmentsFromHistory();
+        long closest_difference = -1;
+        Treatment result = null;
+        for (Treatment record : treatments) {
+            if (!record.isValid) continue;
+            if (record.insulin <= 0) continue;
+            if ((result == null) || (Math.abs(record.date - timestamp) < closest_difference)) {
+                closest_difference = Math.abs(record.date - timestamp);
+                result = record;
+            }
+        }
+        return result;
+    }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
